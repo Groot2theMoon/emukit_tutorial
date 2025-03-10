@@ -1,0 +1,21 @@
+Collecting GPy
+  Using cached GPy-1.13.2.tar.gz (1.1 MB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Collecting numpy<2.0.0,>=1.7 (from GPy)
+  Using cached numpy-1.26.4-cp313-cp313-win_amd64.whl
+Requirement already satisfied: six in c:\users\sungw\anaconda3\envs\emukit_tut\lib\site-packages (from GPy) (1.17.0)
+Collecting paramz>=0.9.6 (from GPy)
+  Using cached paramz-0.9.6-py3-none-any.whl.metadata (1.4 kB)
+Collecting cython>=0.29 (from GPy)
+  Using cached Cython-3.0.12-cp313-cp313-win_amd64.whl.metadata (3.6 kB)
+Collecting scipy<=1.12.0,>=1.3.0 (from GPy)
+  Using cached scipy-1.12.0.tar.gz (56.8 MB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Installing backend dependencies: started
+  Installing backend dependencies: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'error'
