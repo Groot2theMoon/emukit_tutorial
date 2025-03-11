@@ -1,5 +1,7 @@
 import math
 import random
+import matplotlib.pyplot as plt
+import numpy as np
 
 class GaussianProcess:
     def __init__(self, kernel, noise_variance=1e-6):
@@ -59,13 +61,13 @@ class GaussianProcess:
                     L[i][j] = (A[i][j] - s) / L[j][j]
         return L
 
-    def solve_triangular(self, L, b):
-        n = len(L)
-        m = len(b[0]) if isinstance(b[0], list) else 1
+    def solve_triangular(self, L, b): # Lx=b 에서 lower-tri mat L 과 벡터 b 가 주어졌을 때 compute x
+        n = len(L) # L의 row 수
+        m = len(b[0]) if isinstance(b[0], list) else 1 # b의 col 수 
         x = [[0.0]*m for _ in range(n)]
         
         for col in range(m):
-            for i in range(n):
+            for i in range(n): # 현재 열 col 과 행 i 의 값 계산산
                 if isinstance(b[i], list):
                     val = b[i][col]
                 else:
@@ -117,7 +119,7 @@ def rbf_kernel(l=1.0, sigma_f=1.0):
 if __name__ == "__main__":
     # Generate synthetic data
     random.seed(42)
-    X = [[x] for x in [-5 + 10*i/19 for i in range(20)]]
+    X = [[x] for x in np.linspace(-5, 5, 20)]
     y = [math.sin(x[0]) + random.gauss(0, 0.1) for x in X]
 
     # Initialize GP
@@ -125,11 +127,46 @@ if __name__ == "__main__":
     gp.fit(X, y)
 
     # Make predictions
-    X_test = [[x] for x in [-7 + 14*i/99 for i in range(100)]]
+    X_test = [[x] for x in np.linspace(-7, 7, 100)]
+    X_test_flat = [x[0] for x in X_test]  # Flatten for plotting
     mean_pred, std_pred = gp.predict(X_test)
 
-    # Simple ASCII plot
-    print("Approximate GP Regression Result:")
-    for x, m, s in zip(X_test, mean_pred, std_pred):
-        bar = '#' * int(10*(m + 1.96*s - (m - 1.96*s)))
-        print(f"X={x[0]:5.1f} | Mean: {m:6.2f} | Uncertainty: {bar}")
+    # Create true function for comparison
+    X_true = np.linspace(-7, 7, 500)
+    y_true = [math.sin(x) for x in X_true]
+    
+    # Plot everything
+    plt.figure(figsize=(10, 6))
+    
+    # Plot training data
+    plt.scatter([x[0] for x in X], y, c='red', s=50, label='Training data')
+    
+    # Plot true function
+    plt.plot(X_true, y_true, 'b--', label='True function (sin(x))')
+    
+    # Plot GP prediction
+    plt.plot(X_test_flat, mean_pred, 'k-', label='GP mean prediction')
+    
+    # Plot confidence intervals (95%)
+    plt.fill_between(X_test_flat, 
+                    [m - 1.96*s for m, s in zip(mean_pred, std_pred)],
+                    [m + 1.96*s for m, s in zip(mean_pred, std_pred)],
+                    alpha=0.3, color='gray', label='95% confidence interval')
+    
+    plt.title('Gaussian Process Regression')
+    plt.xlabel('x')
+    plt.ylabel('f(x)')
+    plt.legend()
+    plt.grid(True)
+    
+    # Optional: Add a second plot for uncertainty
+    plt.figure(figsize=(10, 4))
+    plt.plot(X_test_flat, std_pred, 'r-', label='Standard deviation')
+    plt.title('Prediction Uncertainty')
+    plt.xlabel('x')
+    plt.ylabel('Standard deviation')
+    plt.grid(True)
+    plt.legend()
+    
+    plt.tight_layout()
+    plt.show()
