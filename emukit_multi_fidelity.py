@@ -115,3 +115,118 @@ plt.legend(['Low fidelity', 'High fidelity'])
 plt.title('High and low fidelity Forrester functions');
 
 plt.show()
+
+""" 
+Observe that in the example above werestrict our observations to 12from the lower fidelity function and only 6 from the high fidelity function.
+as we shall demonstrate further below, fitting a standard GP model to the few highfidelity observations is unlikely to result ins a acceptable fit,
+which is why we shall instead consider the linear multi-fidelity model presented in this section.
+"""
+
+"""
+Below we fit a linear multi-fidelity model to the available low and high fidelity observations. Given the smoothness of the functions, we opt to use an RBF kernel
+for both the boiasand correlation components of the model.
+
+Note : the model implementation defaults to a mixednoise noise likelihood whereaby there is independent Gaussian noise for each fidelity. 
+This can b modified upfront using the 'likelihood' parameter in the model constructor, or by updating them directly after the model has been created.
+In the Example below, we choose to fix thenoise to '0' for both fidelities in order to reflect tha tthe observations are exact. 
+"""
+
+# construct a linear multi-fidelity model
+
+kernels = [GPy.kern.RBF(1), GPy.kern.RBF(1)]
+lin_mf_kernel = emukit.multi_fidelity.kernels.LinearMultiFidelityKernel(kernels)
+gpy_lin_mf_model = GPyLinearMultiFidelityModel(X_train, Y_train, lin_mf_kernel, n_fidelities=2)
+gpy_lin_mf_model.mixed_noise.Gaussian_noise.fix(0)
+gpy_lin_mf_model.mixed_noise.Gaussian_noise_1.fix(0)
+
+# wrap the model using the given 'GPyMultiOutputWrapper'
+
+lin_mf_model = model = GPyMultiOutputWrapper(gpy_lin_mf_model, 2, n_optimization_restarts=5)
+
+# fit the model
+
+lin_mf_model.optimize()
+
+##convert x_plot to its ndarray representation
+
+X_plot = convert_x_list_to_array([x_plot, x_plot])
+X_plot_l = X_plot[:len(x_plot)]
+X_plot_h = X_plot[len(x_plot):]
+
+# compute mean predictions and associated variance
+
+lf_mean_lin_mf_model, lf_var_lin_mf_model = lin_mf_model.predict(X_plot_l)
+lf_std_lin_mf_model = np.sqrt(lf_var_lin_mf_model)
+hf_mean_lin_mf_model, hf_var_lin_mf_model = lin_mf_model.predict(X_plot_h)
+hf_std_lin_mf_model = np.sqrt(hf_var_lin_mf_model)
+
+# plot the posterior mean and variance
+
+plt.figure(figsize=(12,8))
+plt.fill_between(x_plot.flatten(), (lf_mean_lin_mf_model - 1.96*lf_std_lin_mf_model).flatten(), 
+                 (lf_mean_lin_mf_model + 1.96*lf_std_lin_mf_model).flatten(), facecolor='g', alpha=0.3)
+plt.fill_between(x_plot.flatten(), (hf_mean_lin_mf_model - 1.96*hf_std_lin_mf_model).flatten(), 
+                 (hf_mean_lin_mf_model + 1.96*hf_std_lin_mf_model).flatten(), facecolor='y', alpha=0.3)
+
+plt.plot(x_plot, y_plot_l, '-', color='b', label='Low Fidelity')
+plt.plot(x_plot, y_plot_h, '-', color='r', label='High Fidelity')
+plt.plot(x_plot, lf_mean_lin_mf_model, '--', color='g', label='Predicted Low Fidelity')
+plt.plot(x_plot, hf_mean_lin_mf_model, '--', color='y', label='Predicted High Fidelity')
+plt.scatter(x_train_l, y_train_l, color='b', s=40)
+plt.scatter(x_train_h, y_train_h, color='r', s=40)
+
+plt.ylabel('f (x)')
+plt.xlabel('x')
+plt.legend()
+plt.title('Linear multi-fidelity model fit to low and high fidelity Forrester function');
+
+plt.show()
+
+"""
+The above plot demonstrates how the multi-fidelity model learns the relation ship between the low and high-fidelity observations in order to model both of the
+corresponding functions.
+In this example, the posterior mean alamost fits the true function exactly, 
+while the associated uncertainty returned by the model is also appropriately small give the good fit.
+"""
+
+"""
+<Comparison to standard GP>
+In the absence of such a multi-fidelity model, a regular Gaussian process would have been fit exclusively to the high fidelity data.
+As illustrated in the figure below, the resulting Gaussian process posterior yields a much worse fit to the data than that obtained by the
+multi-fidelity model. The uncertainty estimates are also poorly calibrated.
+"""
+
+# Create standard GP model using only high-fidelity data
+
+kernel = GPy.kern.RBF(1)
+high_gp_model = GPy.models.GPRegression(x_train_h, y_train_h, kernel)
+high_gp_model.Gaussian_noise.fix(0)
+
+# fit the GP model
+
+high_gp_model.optimize_restarts(5)
+
+# compute mean predictions and associated variance
+
+hf_mean_high_gp_model, hf_var_high_gp_model = high_gp_model.predict(x_plot)
+hf_std_hf_gp_model = np.sqrt(hf_var_high_gp_model)
+
+# plot the posterior mean and variance for the high-fidelity GP model
+
+plt.figure(figsize=(12,8))
+
+plt.fill_between(x_plot.flatten(), (hf_mean_lin_mf_model - 1.96*hf_std_lin_mf_model).flatten(), 
+                 (hf_mean_lin_mf_model + 1.96*hf_std_lin_mf_model).flatten(), facecolor='y', alpha=0.3)
+plt.fill_between(x_plot.flatten(), (hf_mean_high_gp_model - 1.96*hf_std_hf_gp_model).flatten(), 
+                 (hf_mean_high_gp_model + 1.96*hf_std_hf_gp_model).flatten(), facecolor='k', alpha=0.1)
+
+plt.plot(x_plot, y_plot_h, color='r', label='True Function')
+plt.plot(x_plot, hf_mean_lin_mf_model, '--', color='y', label='Linear Multi-fidelity GP')
+plt.plot(x_plot, hf_mean_high_gp_model, 'k--', label='High fidelity GP')
+plt.scatter(x_train_h, y_train_h, color='r')
+plt.xlabel('x')
+plt.ylabel('f (x)')
+plt.legend()
+plt.title('Comparison of linear multi-fidelity model and high fidelity GP');
+
+plt.show()

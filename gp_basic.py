@@ -119,21 +119,21 @@ def rbf_kernel(l=1.0, sigma_f=1.0):
 if __name__ == "__main__":
     # Generate synthetic data
     random.seed(42)
-    X = [[x] for x in np.linspace(-5, 5, 20)]
-    y = [math.sin(x[0]) + random.gauss(0, 0.1) for x in X]
+    X = [[x] for x in np.linspace(-5, 5, 10)]
+    y = [math.tanh(x[0]) + random.gauss(0, 0.1) for x in X]
 
     # Initialize GP
     gp = GaussianProcess(rbf_kernel(l=1.0, sigma_f=1.0), 0.1**2)
     gp.fit(X, y)
 
     # Make predictions
-    X_test = [[x] for x in np.linspace(-7, 7, 100)]
+    X_test = [[x] for x in np.linspace(-7, 7, 200)]
     X_test_flat = [x[0] for x in X_test]  # Flatten for plotting
     mean_pred, std_pred = gp.predict(X_test)
 
     # Create true function for comparison
     X_true = np.linspace(-7, 7, 500)
-    y_true = [math.sin(x) for x in X_true]
+    y_true = [math.tanh(x) for x in X_true]
     
     # Plot everything
     plt.figure(figsize=(10, 6))
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     plt.scatter([x[0] for x in X], y, c='red', s=50, label='Training data')
     
     # Plot true function
-    plt.plot(X_true, y_true, 'b--', label='True function (sin(x))')
+    plt.plot(X_true, y_true, 'b--', label='True function (tanh(x))')
     
     # Plot GP prediction
     plt.plot(X_test_flat, mean_pred, 'k-', label='GP mean prediction')
