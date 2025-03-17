@@ -39,7 +39,7 @@ model_emukit = GPyModelWrapper(model_gpy_mcmc)
 model_emukit.model.plot()
 model_emukit.model
 
-
+import matplotlib.pyplot as plt
 
 
 """
@@ -66,8 +66,73 @@ bayesopt_loop = BayesianOptimizationLoop(model = model_emukit,
 max_iter = 10
 bayesopt_loop.run_loop(f, max_iter)
 
+# Plot the function evaluations over iterations
+plt.figure(figsize=(10, 6))
+plt.plot(np.arange(len(bayesopt_loop.loop_state.Y)), bayesopt_loop.loop_state.Y, 'o-', color='blue')
+plt.plot(np.arange(len(bayesopt_loop.loop_state.Y)), np.minimum.accumulate(bayesopt_loop.loop_state.Y), 'r-', linewidth=2)
+plt.xlabel('Iteration')
+plt.ylabel('Function Value')
+plt.title('Optimization History')
+plt.legend(['Function evaluations', 'Best value'])
+plt.grid(True)
+plt.show()
+
+# Visualize the function and sampled points
+from emukit.core.visualization import plot_function_2d
+
+# Create meshgrid for the function
+bounds = parameter_space.get_bounds()
+x1_grid = np.linspace(bounds[0][0], bounds[0][1], 100)
+x2_grid = np.linspace(bounds[1][0], bounds[1][1], 100)
+x1_mesh, x2_mesh = np.meshgrid(x1_grid, x2_grid)
+X_grid = np.vstack((x1_mesh.flatten(), x2_mesh.flatten())).T
+Y_grid = f(X_grid)
+Y_mesh = Y_grid.reshape(x1_mesh.shape)
+
+# Plot the function and the sampled points
+plt.figure(figsize=(10, 8))
+plt.contourf(x1_mesh, x2_mesh, Y_mesh, 50, cmap='viridis')
+plt.colorbar(label='Function Value')
+plt.scatter(bayesopt_loop.loop_state.X[:, 0], bayesopt_loop.loop_state.X[:, 1], 
+           c=np.arange(len(bayesopt_loop.loop_state.X)), cmap='Reds', 
+           edgecolors='k', s=80, zorder=2)
+plt.xlabel('x1')
+plt.ylabel('x2')
+plt.title('Six-hump Camel Function with Sampled Points')
+plt.grid(True)
+plt.show()
+
+# You can also visualize the GP model's prediction
+X_plot = bayesopt_loop.loop_state.X
+Y_plot = bayesopt_loop.loop_state.Y
+
+# Update the model with all data
+model_gpy_mcmc.set_XY(X_plot, Y_plot)
+model_emukit.model.plot()
+
+# Visualize the acquisition function
+plt.figure(figsize=(10, 8))
+x1_grid = np.linspace(bounds[0][0], bounds[0][1], 100)
+x2_grid = np.linspace(bounds[1][0], bounds[1][1], 100)
+x1_mesh, x2_mesh = np.meshgrid(x1_grid, x2_grid)
+X_grid = np.vstack((x1_mesh.flatten(), x2_mesh.flatten())).T
+
+# Calculate acquisition function values
+acq_values = expected_improvement_integrated.evaluate(X_grid)
+acq_mesh = acq_values.reshape(x1_mesh.shape)
+
+plt.contourf(x1_mesh, x2_mesh, acq_mesh, 50, cmap='inferno')
+plt.colorbar(label='Acquisition Function Value')
+plt.scatter(bayesopt_loop.loop_state.X[:, 0], bayesopt_loop.loop_state.X[:, 1], 
+           c='white', edgecolors='k', s=80, zorder=2)
+plt.xlabel('x1')
+plt.ylabel('x2')
+plt.title('Integrated Expected Improvement Acquisition Function')
+plt.grid(True)
+plt.show()
+
 # now, once the loop is completed we can visualize the distribution of the hyperparameters given the data.
-import matplotlib.pyplot as plt
+
 
 labels = ['rbf variance', 'rbf lengthscale']
 
@@ -97,3 +162,4 @@ plt.ylabel('Frequency',size=15)
 plt.plot(np.minimum.accumulate(bayesopt_loop.loop_state.Y))
 plt.ylabel('Current best')
 plt.xlabel('Iteration');
+
